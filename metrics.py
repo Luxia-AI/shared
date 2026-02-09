@@ -31,6 +31,7 @@ SERVICE_INFO = Gauge(
     "service_info",
     "Static service metadata",
     ["service", "version", "env"],
+    multiprocess_mode="max",
 )
 
 
