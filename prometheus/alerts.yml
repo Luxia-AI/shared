@@ -1,0 +1,64 @@
+groups:
+  - name: luxia_recording
+    rules:
+      - record: luxia:http_error_rate_5m
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+          /
+          clamp_min(sum(rate(http_requests_total[5m])) by (service), 1)
+
+      - record: luxia:http_p95_latency_seconds_5m
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (service, le))
+
+  - name: luxia_alerts
+    rules:
+      - alert: LuxiaTargetDown
+        expr: up{job=~"luxia_socket_hub|luxia_dispatcher|luxia_worker"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Luxia scrape target down"
+          description: "Prometheus cannot scrape {{ $labels.job }} on {{ $labels.instance }} for 2 minutes."
+
+      - alert: LuxiaHighHttpErrorRate
+        expr: luxia:http_error_rate_5m > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High 5xx rate for {{ $labels.service }}"
+          description: "HTTP 5xx rate for {{ $labels.service }} is above 5% over the last 10 minutes."
+
+      - alert: LuxiaHighP95Latency
+        expr: luxia:http_p95_latency_seconds_5m > 1
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High p95 latency for {{ $labels.service }}"
+          description: "p95 latency for {{ $labels.service }} is above 1 second over the last 10 minutes."
+
+      - alert: LuxiaDispatcherTestTrafficMissing
+        expr: sum(increase(http_requests_total{service="dispatcher",route="/dispatch/test",status="200"}[30m])) < 1
+        for: 30m
+        labels:
+          severity: info
+          team: backend
+        annotations:
+          summary: "No dispatcher test traffic observed"
+          description: "No successful /dispatch/test calls in the last 30 minutes."
+
+      - alert: LuxiaWorkerCompletionsMissing
+        expr: sum(increase(rag_jobs_completed_total[30m])) < 1
+        for: 30m
+        labels:
+          severity: info
+          team: backend
+        annotations:
+          summary: "No worker completion increments observed"
+          description: "rag_jobs_completed_total did not increase in the last 30 minutes."

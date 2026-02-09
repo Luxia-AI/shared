@@ -1,0 +1,44 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    project: luxia
+    environment: prod
+
+rule_files:
+  - alerts.yml
+
+# Optional: wire Alertmanager if available.
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: luxia_socket_hub
+    scheme: https
+    metrics_path: /metrics/socket-hub
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["luxia-backend-dyenfqbrc2etc2gq.uaenorth-01.azurewebsites.net"]
+        labels:
+          service_target: socket-hub
+
+  - job_name: luxia_dispatcher
+    scheme: https
+    metrics_path: /metrics/dispatcher
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["luxia-backend-dyenfqbrc2etc2gq.uaenorth-01.azurewebsites.net"]
+        labels:
+          service_target: dispatcher
+
+  - job_name: luxia_worker
+    scheme: https
+    metrics_path: /metrics/worker
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["luxia-backend-dyenfqbrc2etc2gq.uaenorth-01.azurewebsites.net"]
+        labels:
+          service_target: worker
